@@ -1,0 +1,209 @@
+---
+title: 10. 全局数据流分析：洞察变量的生老病死
+description: 深入控制流图基本块、交汇算子、转移方程与格论，攻克到达定值、活跃变量与可用表达式经典三剑客。
+---
+
+import GraphStepVisualizer from '../../../components/interactive/GraphStepVisualizer';
+import QuizCard from '../../../components/interactive/QuizCard';
+import { Aside } from '@astrojs/starlight/components';
+
+# 10. 全局数据流分析：洞察变量的生老病死
+
+> “编译器不能只盯着眼前的一行代码，它必须有一双穿透所有分支与循环的全知之眼，看清每一个变量在时空长河中的诞生、使用与消亡。”
+
+在前一章中，我们了解了代码在物理内存中的运行环境。而在编译器进行高阶代码优化（例如将变量分配给高速寄存器、删除从未执行的死代码、跨函数传播常数）之前，它必须首先回答一系列全局性的关键问题：
+* 在这一行代码处，变量 $x$ 之前的值未来还会被用到吗？（如果不会，存放它的寄存器就可以立刻借给别人！）
+* 表达式 $a + b$ 之前是否在所有可能执行的路径上都已经被算过了？（如果是，我们直接拿旧结果复用，省掉昂贵的加法！）
+* 这个变量的值到底来自哪一次赋值？是否存在未初始化就直接读取的严重漏洞？
+
+回答这些全局性问题的一整套经典数学理论与算法框架，就是**数据流分析（Dataflow Analysis）**。
+
+---
+
+## 1. 控制流图（CFG）与基本块划分算法
+
+进行数据流分析的前提，是将扁平线性的三地址指令序列转化为具有拓扑分支结构的**控制流图（CFG, Control Flow Graph）**。
+
+### 什么是基本块（Basic Block）？
+基本块是满足如下铁律的单入口、单出口连续指令序列：
+1. **只能从第一条指令进入**（中途绝不允许有任何分支跳入）；
+2. **只能从最后一条指令离开**（中途绝不允许发生任何分支跳出）。
+
+### 基本块划分两步黄金法则
+
+**第一步：寻找所有基本块的首指令（Leaders）**
+1. 程序的**第 1 条指令**是首指令；
+2. 任何条件/无条件转移指令的**目标指令**（Target）是首指令；
+3. 紧跟在转移指令**后面的那一条指令**（Fall-through）也是首指令。
+
+**第二步：构建基本块并连边**
+* 每个首指令及其后续指令，直到下一个首指令之前（或程序结尾），组成一个独立基本块 $B$；
+* 若基本块 $B_1$ 的最后一条指令能跳转到 $B_2$，或者 $B_1$ 顺序紧随其后且末尾不是无条件跳转，则连有向边 $B_1 \to B_2$。
+
+---
+
+## 2. 数据流分析通用框架与半格理论
+
+数据流分析的本质，是在控制流图上建立一组联立方程组，并通过**迭代（Iteration）** 求解其**不动点（Fixed Point）**。
+
+### 核心要素四大金刚
+
+1. **分析方向（Direction）**：
+   * **前向分析（Forward）**：沿控制流方向顺流而下（从 Entry 向 Exit），如到达定值、可用表达式。
+   * **后向分析（Backward）**：逆控制流方向逆流而上（从 Exit 向 Entry），如活跃变量分析。
+
+2. **交汇操作（Meet Operator $\wedge$ / $\sqcup$）**：
+   * **并集（$\bigcup$，May 分析 / 可能成立）**：只要**至少有一条路径**满足条件即可。例如到达定值（只要某条路径能到达就可能到达）、活跃变量（只要未来任一分支还需要就必须存活）。
+   * **交集（$\bigcap$，Must 分析 / 必然成立）**：必须在**所有可能路径**上全部满足才安全。例如可用表达式（必须所有路径都算过才敢放心复用，否则会引发算术错误）。
+
+3. **转移方程（Transfer Function）**：
+   描述程序语句在基本块内部对数据流事实的改变：
+   * 前向方程：
+     $$OUT[B] = gen_B \cup (IN[B] - kill_B)$$
+     $$IN[B] = \bigwedge_{P \in pred(B)} OUT[P]$$
+   * 后向方程：
+     $$IN[B] = use_B \cup (OUT[B] - def_B)$$
+     $$OUT[B] = \bigwedge_{S \in succ(B)} IN[S]$$
+
+4. **半格收敛性保障**：
+   因为程序状态集合是有限的，且转移函数具有**单调性（Monotonicity）**，根据塔斯基不动点定理（Knaster-Tarski Theorem），从极值边界出发不断迭代，**必定在有限步内单调收敛到最大不动点（MFP）**，绝不可能发生无限死循环！
+
+---
+
+## 3. 经典数据流分析“三剑客”深度横评
+
+| 维度 | 到达定值 (Reaching Definitions) | 活跃变量 (Live Variables) | 可用表达式 (Available Expressions) |
+| :--- | :--- | :--- | :--- |
+| **物理直觉** | “哪里的赋值定值能传递到这里？” | “当前变量的值未来是否还会被读取？” | “这个表达式此前是否在所有路径上都算过？” |
+| **分析方向** | **前向 (Forward)** | **后向 (Backward)** | **前向 (Forward)** |
+| **交汇算子** | **$\bigcup$ (并集，May)** | **$\bigcup$ (并集，May)** | **$\bigcap$ (交集，Must)** |
+| **边界条件** | $OUT[\text{Entry}] = \emptyset$ | $IN[\text{Exit}] = \emptyset$ | $OUT[\text{Entry}] = \emptyset$ |
+| **其余块初始值**| $\emptyset$ (空集，逐步增大) | $\emptyset$ (空集，逐步增大) | **$U$ (全集，逐步收紧！)** |
+| **核心转移公式**| $OUT[B] = gen_B \cup (IN[B] - kill_B)$ | $IN[B] = use_B \cup (OUT[B] - def_B)$ | $OUT[B] = e\_gen_B \cup (IN[B] - e\_kill_B)$ |
+| **工业级应用** | 未初始化变量警告、常数折叠、Def-Use 链 | **物理寄存器分配**、**死代码消除** | **全局公共子表达式消除 (Global CSE)** |
+
+<Aside type="note" title="关键原则">
+
+**为什么可用表达式必须初始化为全集 $U$？**  
+因为它的交汇算子是**交集 $\bigcap$**！如果把初始值设为空集 $\emptyset$，任何集合与空集求交集永远是空集，算法将直接“死锁”在空集上，找不到任何可复用的公共子表达式。必须先乐观地假设“全集可用”，再通过交集逐步过滤剔除不安全的表达式。
+
+</Aside>
+
+---
+
+## 4. 交互式推演：4 块控制流图活跃变量后向迭代演算
+
+下面我们针对一个包含循环的经典 CFG，推导演算活跃变量（Live Variables）的后向迭代全过程：
+
+```c
+// 对应源码逻辑：
+// B1 (Entry): i = 1; j = 1;
+// B2 (Loop Header): if (i > 10) goto B4;
+// B3 (Loop Body): j = j + i; i = i + 1; goto B2;
+// B4 (Exit): return j;
+```
+
+各基本块的局部引用的 $use$ 与覆盖定值的 $def$ 为：
+* $B_1: use = \emptyset, \; def = \{i, j\}$
+* $B_2: use = \{i\}, \; def = \emptyset$
+* $B_3: use = \{i, j\}, \; def = \{i, j\}$
+* $B_4: use = \{j\}, \; def = \emptyset$
+
+export const liveVarGraph = {
+  nodes: [
+    { id: 'B1', label: 'B1: Entry\ni = 1; j = 1;' },
+    { id: 'B2', label: 'B2: Loop Header\nif i > 10 goto B4' },
+    { id: 'B3', label: 'B3: Loop Body\nj = j + i;\ni = i + 1;' },
+    { id: 'B4', label: 'B4: Exit\nreturn j;' }
+  ],
+  edges: [
+    { id: 'e1', source: 'B1', target: 'B2', label: 'enter' },
+    { id: 'e2', source: 'B2', target: 'B3', label: 'i <= 10 (loop)' },
+    { id: 'e3', source: 'B2', target: 'B4', label: 'i > 10 (exit)' },
+    { id: 'e4', source: 'B3', target: 'B2', label: 'back-edge' }
+  ]
+};
+
+export const liveVarSteps = [
+  {
+    title: "初始阶段：边界条件与全图置空",
+    description: "后向分析从出口向入口流动。初始化边界条件：IN[Exit] = ∅。所有基本块的初始 IN 集合均设为空集 ∅。准备开始第一轮后向迭代。",
+    badge: "初始化",
+    activeNodes: ['B4'],
+    activeEdges: [],
+    nodeColorMap: { B1: '#475569', B2: '#475569', B3: '#475569', B4: '#06b6d4' }
+  },
+  {
+    title: "第一轮迭代：计算出口基本块 B4",
+    description: "B4 是出口块，无后继，OUT[B4] = ∅。应用方程 IN[B4] = use[B4] ∪ (OUT[B4] - def[B4]) = {j} ∪ ∅ = {j}。变量 j 在 B4 入口处必须保持活跃！",
+    badge: "第 1 轮: B4",
+    activeNodes: ['B4'],
+    activeEdges: ['e3'],
+    nodeColorMap: { B1: '#475569', B2: '#475569', B3: '#475569', B4: '#10b981' }
+  },
+  {
+    title: "第一轮迭代：计算循环体基本块 B3",
+    description: "B3 的后继为 B2。此时 B2 尚未更新，IN[B2] 仍为 ∅，故 OUT[B3] = ∅。应用方程 IN[B3] = use[B3] ∪ (∅ - def[B3]) = {i, j}。变量 i, j 在 B3 入口保持活跃！",
+    badge: "第 1 轮: B3",
+    activeNodes: ['B3'],
+    activeEdges: ['e4'],
+    nodeColorMap: { B1: '#475569', B2: '#475569', B3: '#10b981', B4: '#10b981' }
+  },
+  {
+    title: "第一轮迭代：计算循环头 B2 与入口 B1",
+    description: "B2 的后继有 B3 和 B4！汇聚 OUT[B2] = IN[B3] ∪ IN[B4] = {i, j} ∪ {j} = {i, j}。IN[B2] = use[B2] ∪ OUT[B2] = {i, j}！接着 B1 的 OUT[B1] = IN[B2] = {i, j}，但 B1 自身重新定值了 i, j (def={i, j})，所以 IN[B1] = ∅ - {i, j} = ∅！",
+    badge: "第 1 轮: B2 & B1",
+    activeNodes: ['B2', 'B1'],
+    activeEdges: ['e1', 'e2'],
+    nodeColorMap: { B1: '#3b82f6', B2: '#10b981', B3: '#10b981', B4: '#10b981' }
+  },
+  {
+    title: "第二轮迭代：沿回边反哺 B3，全图达到不动点！",
+    description: "再次检查 B3：其后继 B2 的 IN[B2] 已变为 {i, j}，故 OUT[B3] 更新为 {i, j}。但由于 B3 同时 def={i, j}，IN[B3] 依然为 use[B3] = {i, j}，保持不变！各块集合均不再发生任何变化，算法收敛宣告成功！",
+    badge: "收敛不动点",
+    activeNodes: ['B1', 'B2', 'B3', 'B4'],
+    activeEdges: ['e1', 'e2', 'e3', 'e4'],
+    nodeColorMap: { B1: '#06b6d4', B2: '#06b6d4', B3: '#06b6d4', B4: '#06b6d4' }
+  }
+];
+
+<GraphStepVisualizer
+  client:visible
+  title="4-Block CFG 活跃变量数据流后向迭代收敛过程"
+  algorithmName="活跃变量分析 (Live Variables)"
+  initialGraph={liveVarGraph}
+  layoutName="dagre"
+  steps={liveVarSteps}
+/>
+
+---
+
+## 5. 核心难点自测与巩固
+
+<QuizCard
+  client:visible
+  category="数据流分析三剑客"
+  question="关于三大经典数据流分析的方向、交汇算子与应用场景，下列组合完全正确的是："
+  options={[
+    "到达定值：前向 + 并集 (May)；活跃变量：后向 + 并集 (May)；可用表达式：前向 + 交集 (Must)。",
+    "到达定值：后向 + 交集 (Must)；活跃变量：前向 + 并集 (May)；可用表达式：后向 + 并集 (May)。",
+    "三大分析均为前向分析，算子全为交集以保证最高安全性。",
+    "可用表达式采用后向分析，用于计算变量死活并引导寄存器分配。"
+  ]}
+  answer={0}
+  explanation="正确！到达定值顺流而下（前向），只要某条路径可达即可（并集）；活跃变量逆流而上（后向），只要未来任一分支还需要读取就算存活（并集）；可用表达式顺流而下（前向），必须在所有路径上都计算过才敢消除（交集）。"
+/>
+
+<QuizCard
+  client:visible
+  category="格论与迭代初始化"
+  question="在可用表达式（Available Expressions）分析中，为什么非入口节点的初始值必须设为全集 U，而不能设为空集 ∅？"
+  options={[
+    "因为交汇算子是交集 ∩；若初始为 ∅，任何集合与 ∅ 求交集永远为 ∅，会导致算法直接死锁在空集，错失所有优化机会。",
+    "因为全集 U 能够使 CPU 指令流水线并行发射效率提高 50%。",
+    "因为操作系统只允许给编译器的集合分配偶数大小的内存空间。",
+    "这是为了防止程序在运行时发生除以零的硬件异常。"
+  ]}
+  answer={0}
+  explanation="正确！Must 分析从最乐观的最大元素（全集 U）出发，遇到不满足的路径逐步通过交集 ∩ 裁剪剔除；若从空集 ∅ 开始，交集运算将永远停留在 ∅，无法推导出任何有用的可用表达式！"
+/>

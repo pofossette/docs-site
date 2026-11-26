@@ -1,0 +1,551 @@
+@layer base, starlight, theme, components, utilities;
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ==========================================================================
+   Geist / Vercel Minimalist Dual-Theme Tokens (Light Default + Dark)
+   ========================================================================== */
+
+:root,
+:root[data-theme='light'] {
+  --sl-font: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif;
+  --sl-font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --sl-line-height: 1.72;
+  --sl-line-height-headings: 1.25;
+
+  /* Starlight Core Surfaces & Borders */
+  --sl-color-bg: #ffffff;
+  --sl-color-bg-nav: rgba(255, 255, 255, 0.85);
+  --sl-color-bg-sidebar: #fafafa;
+  --sl-color-hairline-light: #eaeaea;
+  --sl-color-hairline: #eaeaea;
+  --sl-color-hairline-shade: #e5e5e5;
+  --sl-color-accent-low: #eff6ff;
+  --sl-color-accent: #0070f3;
+  --sl-color-accent-high: #075985;
+
+  /* Neutral Geist Gray Scale for Starlight Chrome & Markdown */
+  --sl-color-white: #171717;
+  --sl-color-gray-1: #27272a;
+  --sl-color-gray-2: #3f3f46;
+  --sl-color-gray-3: #52525b;
+  --sl-color-gray-4: #71717a;
+  --sl-color-gray-5: #e4e4e7;
+  --sl-color-gray-6: #f4f4f5;
+  --sl-color-gray-7: #fafafa;
+  --sl-color-black: #ffffff;
+  --sl-color-bg-inline-code: #f4f4f5;
+  --sl-color-text: #3f3f46;
+  --sl-color-text-accent: #0070f3;
+  --sl-color-text-invert: #ffffff;
+
+  /* Interactive Workbench Semantic Tokens */
+  --vz-surface: #ffffff;
+  --vz-surface-subtle: #fafafa;
+  --vz-surface-muted: #f4f4f5;
+  --vz-border: #eaeaea;
+  --vz-border-strong: #d4d4d8;
+  --vz-ink: #171717;
+  --vz-ink-muted: #52525b;
+  --vz-ink-subtle: #71717a;
+  --vz-accent: #0070f3;
+  --vz-accent-bg: #eff6ff;
+  --vz-accent-border: #bfdbfe;
+  --vz-btn-primary-bg: #171717;
+  --vz-btn-primary-fg: #ffffff;
+  --vz-dot-color: rgba(0, 0, 0, 0.07);
+}
+
+:root[data-theme='dark'] {
+  /* Starlight Core Surfaces & Borders */
+  --sl-color-bg: #000000;
+  --sl-color-bg-nav: rgba(10, 10, 10, 0.82);
+  --sl-color-bg-sidebar: #0a0a0a;
+  --sl-color-hairline-light: #262626;
+  --sl-color-hairline: #1f1f1f;
+  --sl-color-hairline-shade: #1f1f1f;
+  --sl-color-accent-low: #0c192c;
+  --sl-color-accent: #3291ff;
+  --sl-color-accent-high: #bfdbfe;
+
+  /* Neutral Geist Gray Scale for Starlight Chrome & Markdown */
+  --sl-color-white: #ededed;
+  --sl-color-gray-1: #e4e4e7;
+  --sl-color-gray-2: #a1a1aa;
+  --sl-color-gray-3: #71717a;
+  --sl-color-gray-4: #52525b;
+  --sl-color-gray-5: #262626;
+  --sl-color-gray-6: #111111;
+  --sl-color-black: #000000;
+  --sl-color-bg-inline-code: #18181b;
+  --sl-color-text: #d4d4d8;
+  --sl-color-text-accent: #3291ff;
+  --sl-color-text-invert: #0a0a0a;
+
+  /* Interactive Workbench Semantic Tokens */
+  --vz-surface: #0a0a0a;
+  --vz-surface-subtle: #111111;
+  --vz-surface-muted: #18181b;
+  --vz-border: #262626;
+  --vz-border-strong: #3f3f46;
+  --vz-ink: #ededed;
+  --vz-ink-muted: #a1a1aa;
+  --vz-ink-subtle: #71717a;
+  --vz-accent: #3291ff;
+  --vz-accent-bg: rgba(50, 145, 255, 0.12);
+  --vz-accent-border: rgba(50, 145, 255, 0.35);
+  --vz-btn-primary-bg: #ededed;
+  --vz-btn-primary-fg: #0a0a0a;
+  --vz-dot-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ==========================================================================
+   Typography & Global Editorial Polish
+   ========================================================================== */
+
+html,
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Translucent frosted top navigation bar */
+.page > header.header {
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+
+/* Crisp heading typography */
+.sl-markdown-content :is(h1, h2):not(:where(.not-content *)),
+[data-page-title],
+.hero h1 {
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  color: var(--vz-ink);
+}
+
+.sl-markdown-content :is(h3, h4):not(:where(.not-content *)) {
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--vz-ink);
+}
+
+/* Editorial line-height on markdown prose */
+.sl-markdown-content {
+  line-height: 1.72;
+}
+
+/* Restore list markers inside markdown prose where Tailwind preflight resets them */
+.sl-markdown-content ul:not(:where(.not-content *, .sl-steps, [role='tablist'])) {
+  list-style-type: disc;
+  padding-inline-start: 1.5rem;
+}
+
+.sl-markdown-content ul ul:not(:where(.not-content *, .sl-steps, [role='tablist'])) {
+  list-style-type: circle;
+}
+
+.sl-markdown-content ol:not(:where(.not-content *, .sl-steps)) {
+  list-style-type: decimal;
+  padding-inline-start: 1.5rem;
+}
+
+/* Refined inline code pills */
+.sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+  border-radius: 0.375rem;
+  border: 1px solid var(--vz-border);
+  background-color: var(--sl-color-bg-inline-code);
+  color: var(--vz-ink);
+  padding: 0.125rem 0.375rem;
+  font-size: 0.86em;
+  font-weight: 500;
+}
+
+/* Sleek minimal markdown tables */
+.sl-markdown-content table:not(:where(.not-content *)) {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 0.875rem;
+  border: 1px solid var(--vz-border);
+  border-radius: 0.5rem;
+}
+
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+  border-bottom: 1px solid var(--vz-border);
+  padding: 0.625rem 0.875rem;
+  vertical-align: top;
+}
+
+.sl-markdown-content th:not(:where(.not-content *)) {
+  background-color: var(--vz-surface-subtle);
+  color: var(--vz-ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sl-markdown-content tbody tr:last-child td:not(:where(.not-content *)) {
+  border-bottom: 0;
+}
+
+/* Restrained editorial blockquotes */
+.sl-markdown-content blockquote:not(:where(.not-content *)) {
+  border-inline-start: 2px solid var(--vz-border-strong);
+  padding-inline-start: 1rem;
+  color: var(--vz-ink-muted);
+}
+
+/* Subtle rounding for Starlight cards & asides */
+.card,
+.starlight-aside {
+  border-radius: 0.75rem;
+}
+
+/* ==========================================================================
+   Shared Interactive Workbench Utility Classes
+   ========================================================================== */
+
+@layer components {
+  .vz-shell {
+    background-color: var(--vz-surface);
+    border: 1px solid var(--vz-border);
+    border-radius: 0.75rem;
+    color: var(--vz-ink);
+  }
+
+  .vz-header {
+    background-color: var(--vz-surface-subtle);
+    border-bottom: 1px solid var(--vz-border);
+  }
+
+  .vz-dot-grid {
+    background-color: var(--vz-surface);
+    background-image: radial-gradient(var(--vz-dot-color) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  .vz-keycap {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--sl-font-mono);
+    font-size: 0.75rem;
+    line-height: 1.25;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--vz-border-strong);
+    background-color: var(--vz-surface-muted);
+    color: var(--vz-ink-muted);
+  }
+}
+
+:root[data-theme='light'] .vz-shell {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* ==========================================================================
+   Light-Mode Compatibility Layer for Legacy MDX stateView / customRender JSX
+   ========================================================================== */
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) .bg-slate-950 {
+  background-color: var(--vz-surface);
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .bg-slate-900,
+  .bg-slate-900\/60,
+  .bg-slate-900\/80,
+  .bg-slate-950\/80,
+  .bg-slate-950\/95
+) {
+  background-color: var(--vz-surface-subtle);
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .bg-slate-800,
+  .bg-slate-800\/60,
+  .bg-slate-800\/80
+) {
+  background-color: var(--vz-surface-muted);
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .border-slate-800,
+  .border-slate-800\/80
+) {
+  border-color: var(--vz-border);
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .border-slate-700,
+  .border-slate-700\/60
+) {
+  border-color: var(--vz-border-strong);
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .text-white,
+  .text-slate-100,
+  .text-slate-200
+) {
+  color: var(--vz-ink);
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) .text-slate-300 {
+  color: #3f3f46;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) .text-slate-400 {
+  color: var(--vz-ink-muted);
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .text-slate-500,
+  .text-slate-600
+) {
+  color: var(--vz-ink-subtle);
+}
+
+/* Cyan / Blue semantic tints */
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .bg-cyan-950,
+  .bg-cyan-950\/20,
+  .bg-cyan-950\/30,
+  .bg-cyan-950\/80,
+  .bg-cyan-500\/20,
+  .bg-blue-950\/30,
+  .bg-blue-950\/50,
+  .bg-blue-500\/20
+) {
+  background-color: #eff6ff;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .border-cyan-600\/50,
+  .border-cyan-700,
+  .border-cyan-800\/40,
+  .border-cyan-800\/60,
+  .border-cyan-800\/80,
+  .border-blue-800\/50,
+  .border-blue-800\/60
+) {
+  border-color: #bfdbfe;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) .border-cyan-500 {
+  border-color: #0070f3;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .text-cyan-200,
+  .text-cyan-300,
+  .text-cyan-400,
+  .text-blue-200,
+  .text-blue-300,
+  .text-blue-400
+) {
+  color: #0070f3;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) .shadow-cyan-950\/50 {
+  --tw-shadow-color: rgba(0, 112, 243, 0.14);
+}
+
+/* Emerald semantic tints */
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .bg-emerald-950\/30,
+  .bg-emerald-950\/80,
+  .bg-emerald-900\/60,
+  .bg-emerald-500\/20
+) {
+  background-color: #ecfdf5;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .border-emerald-700\/60,
+  .border-emerald-800\/50,
+  .border-emerald-800\/60
+) {
+  border-color: #a7f3d0;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .border-emerald-500,
+  .border-emerald-500\/60
+) {
+  border-color: #10b981;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .text-emerald-200,
+  .text-emerald-300,
+  .text-emerald-400
+) {
+  color: #047857;
+}
+
+/* Amber & Orange semantic tints */
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .bg-amber-950\/30,
+  .bg-amber-950\/50,
+  .bg-amber-500\/20
+) {
+  background-color: #fffbeb;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .border-amber-800\/50,
+  .border-amber-800\/60
+) {
+  border-color: #fde68a;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .text-amber-200,
+  .text-amber-300,
+  .text-amber-400
+) {
+  color: #b45309;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) .bg-orange-950\/30 {
+  background-color: #fff7ed;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) .border-orange-800\/60 {
+  border-color: #fed7aa;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .text-orange-300,
+  .text-orange-400
+) {
+  color: #c2410c;
+}
+
+/* Rose semantic tints */
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .bg-rose-950\/20,
+  .bg-rose-950\/30,
+  .bg-rose-500\/20
+) {
+  background-color: #fff1f2;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .border-rose-500\/40,
+  .border-rose-800\/50,
+  .border-rose-800\/60
+) {
+  border-color: #fecdd3;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .text-rose-200,
+  .text-rose-300,
+  .text-rose-400,
+  .text-rose-400\/80
+) {
+  color: #be123c;
+}
+
+/* Purple semantic tints */
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .bg-purple-950\/30,
+  .bg-purple-950\/50,
+  .bg-purple-500\/20
+) {
+  background-color: #faf5ff;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .border-purple-800\/50,
+  .border-purple-800\/60
+) {
+  border-color: #e9d5ff;
+}
+
+:root[data-theme='light'] :where(.vz-stage, .vz-cytoscape-overlay) :is(
+  .text-purple-200,
+  .text-purple-300,
+  .text-purple-400
+) {
+  color: #7e22ce;
+}
+
+/* ==========================================================================
+   Cytoscape & KaTeX Layout Safety
+   ========================================================================== */
+
+/* Cytoscape container styling */
+.cytoscape-container {
+  width: 100%;
+  height: 380px;
+  background-color: var(--vz-surface);
+  border: 1px solid var(--vz-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Ensure Katex renders cleanly without breaking layout */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+/* Mermaid diagram card styling matching Vercel / Geist dual-theme */
+.sl-markdown-content pre.mermaid,
+:root[data-theme='light'] .sl-markdown-content pre.mermaid[data-processed],
+:root[data-theme='dark'] .sl-markdown-content pre.mermaid[data-processed] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1.5rem 0;
+  padding: 1.5rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--vz-border);
+  background-color: var(--vz-surface);
+  background-image: radial-gradient(var(--vz-dot-color) 1px, transparent 1px);
+  background-size: 16px 16px;
+  overflow-x: auto;
+}
+
+:root[data-theme='light'] .sl-markdown-content pre.mermaid[data-processed] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sl-markdown-content pre.mermaid:not([data-processed]) {
+  min-height: 160px;
+  color: var(--vz-ink-subtle);
+  font-family: var(--sl-font-mono);
+  font-size: 0.8125rem;
+}
+
+.sl-markdown-content pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+  font-family: var(--sl-font);
+}
+
+:root[data-theme='light'] .sl-markdown-content pre.mermaid svg .cluster rect {
+  fill: #fafafa !important;
+  stroke: #e4e4e7 !important;
+  rx: 8px;
+  ry: 8px;
+}
+
+:root[data-theme='light'] .sl-markdown-content pre.mermaid svg .edgeLabel rect,
+:root[data-theme='light'] .sl-markdown-content pre.mermaid svg span.edgeLabel {
+  background-color: #ffffff !important;
+}
