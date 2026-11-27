@@ -1,0 +1,57 @@
+---
+title: 编译原理交互实验室
+description: 融合启发式讲义、Cytoscape.js 动态图谱拓扑与状态机单步推演的编译原理交互式学习指南。
+sidebar:
+  order: 0
+  label: 课程导览与知识图谱
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+> “所有伟大的编译工程奇迹，本质上都是语言抽象层级之间严密而优雅的逐层翻译。”
+
+本实验室覆盖现代编译流水线全六大阶段，提供 **Cytoscape.js 动态有向图 / 语法树画布**、**单步状态机推演器** 以及每讲配套的**随堂交互自测**。
+
+---
+
+## 核心学习模块一览
+
+<CardGrid>
+  <Card title="前端阶段：词法与语法分析（01–06 讲）" icon="puzzle">
+    涵盖编译流水线解耦（M×N 到 M+N）、Thompson 构造、子集构造法与 Hopcroft 最小化，以及 LL(1) 自顶向下、LR(0)/SLR(1)/LALR(1) 自底向上栈式推演。
+    [从第 01 讲开始 &rarr;](/compiler/01-intro/)
+  </Card>
+  <Card title="中端阶段：语义、IR 与控制流（07–09 讲）" icon="document">
+    涵盖属性文法（SDD/SDT）、S/L-属性计算、三地址码与四元式、布尔表达式短路回填（Backpatching）以及运行时活动记录栈帧与 Display 表。
+    [进入语义分析 &rarr;](/compiler/07-semantics/)
+  </Card>
+  <Card title="后端阶段：数据流、优化与代码生成（10–12 讲）" icon="laptop">
+    涵盖 CFG 基本块、到达定值 / 活跃变量 / 可用表达式三剑客、DAG 局部优化、循环不变量外提与 Chaitin-Briggs 图着色寄存器分配。
+    [进入数据流分析 &rarr;](/compiler/10-dataflow/)
+  </Card>
+  <Card title="核心算法全演算与综合演练（附录 & 13 讲）" icon="open-book">
+    手把手完整数字推导 7 大核心经典算法，并在终极冲刺自测库检验全流程实战掌握度。
+    [7 大核心算法精要 &rarr;](/compiler/algorithms-reference/) · [终极自测演练 &rarr;](/compiler/13-quiz-master/)
+  </Card>
+</CardGrid>
+
+---
+
+## 全部章节目录
+
+| 阶段 | 讲次 | 核心主题 |
+| :--- | :--- | :--- |
+| **导论与词法** | [01. 引子与直觉建立](/compiler/01-intro/) | 编译器 vs 解释器、虚拟机演进 |
+| | [02. 编译器的流水线全景](/compiler/02-pipeline/) | 六大工序、符号表、IR 的 M+N 工程解耦 |
+| | [03. 词法分析](/compiler/03-lexical/) | Token、Thompson NFA、子集构造、Hopcroft 最小化 |
+| **语法分析** | [04. 语法分析前置篇](/compiler/04-grammar-intro/) | 正则局限与泵引理直觉、PDA 与 CFG |
+| | [05. 自顶向下分析](/compiler/05-top-down/) | 左递归消除、FIRST/FOLLOW、LL(1) 预测分析 |
+| | [06. 自底向上分析](/compiler/06-bottom-up/) | 移进-归约、句柄与活前缀、LR(0)/SLR(1)/LR(1)/LALR(1) |
+| **语义与运行时** | [07. 语义分析与语法制导翻译](/compiler/07-semantics/) | 综合/继承属性、依赖图与拓扑排序 |
+| | [08. 中间代码与控制流翻译](/compiler/08-control-flow/) | 三地址码、四元式、布尔短路与拉链回填 |
+| | [09. 运行时存储组织](/compiler/09-runtime/) | 活动记录栈帧、控制链/访问链、Display 表 |
+| **优化与生成** | [10. 全局数据流分析](/compiler/10-dataflow/) | 格论、到达定值、活跃变量、可用表达式 |
+| | [11. 机器无关优化](/compiler/11-optimization/) | 基本块 DAG、循环优化、强度削弱 |
+| | [12. 目标代码生成与寄存器分配](/compiler/12-codegen/) | 指令选择、局部贪心分配、Chaitin-Briggs 图着色 |
+| **冲刺与附录** | [13. 期末终极冲刺实战](/compiler/13-quiz-master/) | 12 道综合经典考题交互演练 |
+| | [附录：7 大核心算法精要](/compiler/algorithms-reference/) | 7 大必考算法完整手算推导表格 |

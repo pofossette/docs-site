@@ -6,9 +6,14 @@ import { unified } from '@astrojs/markdown-remark';
 import tailwindcss from '@tailwindcss/vite';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import { getActiveCourse } from './courses.mjs';
+
+const course = getActiveCourse();
 
 export default defineConfig({
   ...(process.env.SITE_URL ? { site: process.env.SITE_URL } : {}),
+  base: course.base,
+  outDir: `./dist/${course.id}`,
   vite: {
     plugins: [tailwindcss()],
     build: {
@@ -37,8 +42,8 @@ export default defineConfig({
       },
     }),
     starlight({
-      title: '交互式学习笔记',
-      description: '个人技术文档、交互式推导与可视化学习笔记',
+      title: course.title,
+      description: course.description,
       social: [
         {
           icon: 'github',
@@ -52,18 +57,7 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: '平台导览',
-          items: [
-            { label: '平台总览与使用指引', slug: 'index' },
-          ],
-        },
-        {
-          label: '编译原理生动交互实验室',
-          items: [{ autogenerate: { directory: 'compiler' } }],
-        },
-        {
-          label: '软件需求分析全景交互教程',
-          items: [{ autogenerate: { directory: 'se-req' } }],
+          autogenerate: { directory: '.' },
         },
       ],
     }),

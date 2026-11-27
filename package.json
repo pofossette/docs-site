@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "dev:compiler": "COURSE_ID=compiler astro dev",
+    "dev:se-req": "COURSE_ID=se-req astro dev",
     "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
+    "build": "node scripts/build-all.mjs",
+    "preview": "node scripts/preview.mjs",
     "astro": "astro"
   },
   "dependencies": {
