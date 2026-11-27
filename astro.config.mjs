@@ -57,7 +57,8 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          autogenerate: { directory: '.' },
+          label: course.title,
+          items: [{ autogenerate: { directory: course.id } }],
         },
       ],
     }),
