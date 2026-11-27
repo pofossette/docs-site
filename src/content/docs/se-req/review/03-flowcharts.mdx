@@ -1,0 +1,481 @@
+---
+title: 03. 流程图导读：12 大工程机制与模型图解
+description: 12 幅 Mermaid 流程图、时序图与状态机，全景图解需求分层、DFD、Wiegers 模型、正式审查与 CCB 闭环。
+sidebar:
+  order: 3
+---
+
+本文档精选《软件需求分析》课程中贯穿全周期的 **12 个核心工程机制、架构模型与算法流程**，通过规范的 Mermaid 流程图与序列图，提供清晰、精准的可视化导读。
+
+---
+
+## 一、软件需求三层次金字塔与交付制品映射全景
+
+软件需求不是单一维度的平铺直叙，而是由抽象到具象、层层分解并最终映射到正式工程制品的金字塔结构。
+
+```mermaid
+flowchart TD
+    subgraph Pyramid["需求抽象分层"]
+        BR["1. 业务需求 (Business Requirements)
+• 组织高层战略愿景与商业目标"]
+        UR["2. 用户需求 (User Requirements)
+• 最终用户通过系统执行的任务场景"]
+        SR["3. 软件系统需求 (Software Requirements)
+• 工程师必须构建的系统功能特性"]
+        NFR["4. 非功能需求 (Non-Functional Requirements)
+• 质量属性、运行环境与外部约束"]
+    end
+
+    subgraph Documents["正式工程交付文档"]
+        VSD["《项目视图与范围文档》
+(Vision & Scope Doc)"]
+        UCD["《用例文档》/ 用户故事集
+(Use Case Specification)"]
+        SRS["《软件需求规格说明书》
+(Software Requirements Spec, SRS)"]
+    end
+
+    subgraph NF_Detail["非功能分类细化"]
+        QA["质量属性 (可用性/可靠性/可维护性等)"]
+        DC["设计约束 (技术栈/协议/法规硬件限制)"]
+        ONF["其他非功能需求 (国际化/数据迁移等)"]
+    end
+
+    BR --> VSD
+    UR --> UCD
+    SR --> SRS
+    NFR --> SRS
+
+    BR --> UR
+    UR --> SR
+    UR --> NFR
+
+    NFR --> QA
+    NFR --> DC
+    NFR --> ONF
+```
+
+- **图解精要**：
+  1. **自顶向下驱动**：业务需求决定了系统的方向，用户需求是将业务需求细化为用户视角的任务，功能需求与非功能需求是支撑用户任务的技术契约。
+  2. **交付文档对齐**：业务需求对应《项目视图与范围文档》；用户需求对应《用例文档》；功能需求与非功能需求共同汇聚在最核心的《软件需求规格说明书》(SRS) 中。
+
+---
+
+## 二、需求工程双轮驱动生命周期闭环流程
+
+需求工程由“需求开发”与“需求管理”两大协同运行的轮轨组成，两者紧密交织，支撑软件全生命周期的演进。
+
+```mermaid
+flowchart LR
+    subgraph RD["需求开发 (Requirements Development)"]
+        Elicit["需求获取
+(Elicitation)"] --> Analyze["需求分析与建模
+(Analysis)"]
+        Analyze --> Spec["编写需求规格说明
+(Specification)"]
+        Spec --> Val["需求确认与验证
+(Validation)"]
+        Val -->|发现缺陷/修改澄清| Spec
+        Val -->|遗漏场景/启发新需求| Elicit
+    end
+
+    subgraph Base["承前启后"]
+        BL[("正式软件需求基线
+(Requirements Baseline)")]
+    end
+
+    subgraph RM["需求管理 (Requirements Management)"]
+        VC["版本控制
+(Version Control)"]
+        ST["状态跟踪
+(Status Tracking)"]
+        CC["变更控制
+(Change Control)"]
+        TR["需求跟踪能力
+(Traceability)"]
+    end
+
+    Val -->|签字受审通过| BL
+    BL --> VC
+    BL --> ST
+    BL --> CC
+    BL --> TR
+
+    CC -->|批准变更请求| RD
+    TR -->|波及面分析驱动| CC
+```
+
+- **图解精要**：
+  1. 需求开发是一项高度迭代的活动，验证发现的问题会迅速回流到获取和规格编写阶段。
+  2. 一旦需求获得开发方与客户共同承诺，即进入“基线（Baseline）”，此时由需求管理活动全面接管；任何改动必须遵循严格的变更控制。
+
+---
+
+## 三、系统关联图与业务边界模型 (Context Diagram)
+
+系统关联图是最高抽象层级的数据流图（0层DFD），用于明确界定系统自身与外部世界人员、外设及第三方系统的绝对边界。
+
+```mermaid
+flowchart LR
+    Student["外部实体：学员 (Trainee)"]
+    Operator["外部实体：系统操作员 (Operator)"]
+    Finance["外部实体：财务/第三方支付接口"]
+
+    subgraph SystemBoundary["系统边界 (System Boundary)"]
+        MIS["培训中心管理信息系统
+(Training Center MIS)"]
+    end
+
+    Student -->|"报名表单 / 课程咨询 / 退课申请"| MIS
+    MIS -->|"入学通知书 / 缴费收据 / 咨询解答"| Student
+
+    Operator -->|"排课指令 / 讲师配置 / 结算审核"| MIS
+    MIS -->|"系统监控日志 / 业务报表"| Operator
+
+    MIS -->|"对账流水 / 扣款凭据"| Finance
+    Finance -->|"支付回执 / 清算状态"| MIS
+```
+
+- **图解精要**：
+  1. 系统内部在此处不分解为子模块，仅体现为一个整体系统核心加工。
+  2. 凡是在矩形外部实体内部发生的逻辑都不属于本系统开发范围，明确界定了研发契约边界。
+
+---
+
+## 四、结构化分析三层数据流图 (DFD) 分解体系
+
+以经典“图书预订系统”为例，展示数据流图自顶向下、逐层精化的分解过程。
+
+```mermaid
+flowchart TD
+    subgraph Level0["0 层 DFD (关联图)"]
+        C0["顾客"] -->|"订单"| P0["0 图书预订系统"]
+        P0 -->|"汇总订单"| Pub0["出版社"]
+    end
+
+    subgraph Level1["1 层 DFD (子系统分解)"]
+        C1["顾客"] -->|"订单"| P1["1 验证订单"]
+        D1[("D1 图书目录")] -.->|"检索库存"| P1
+        P1 -->|"合格订单"| D2[("D2 合格订单库")]
+        D2 -.->|"读取待汇总"| P2["2 产生汇总订单"]
+        P2 -->|"汇总订单"| Pub1["出版社"]
+        P2 -->|"待发出清单"| D3[("D3 待发出订单")]
+    end
+
+    subgraph Level2["2 层 DFD (对加工 2 进行细化)"]
+        D2_in[("D2 合格订单库")] --> P21["2.1 按出版社归类"]
+        Credit[("D4 客户信用库")] -.->|"核实信用等级"| P21
+        P21 --> P22["2.2 批量汇总计算"]
+        P22 --> P23["2.3 生成出版商订单清单"]
+        P23 --> D3_out[("D3 待发出订单")]
+    end
+
+    Level0 --> Level1
+    Level1 --> Level2
+```
+
+- **图解精要**：
+  1. **父子平衡原则**：子图的输入/输出数据流必须与父图中被分解加工的输入/输出数据流严格对应。
+  2. **数据守恒**：加工必须有输入和输出，数据不能从外部实体直接流入数据存储，也不能在两个数据存储之间凭空流动。
+
+---
+
+## 五、面向对象需求模型全家桶 (UML 交互与结构)
+
+在面向对象需求分析中，用例图、活动图和时序图构成了一套完整刻画人机行为的建模组合。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 最终用户 (User)
+    participant Win as 界面：CustomerWindow
+    participant Svc as 业务层：PrintService
+    participant Queue as 调度层：PrintQueue
+    participant Printer as 物理硬件：NetworkPrinter
+
+    User->>Win: 触发操作 PrintAllCustomers()
+    activate Win
+    Win->>Win: 屏幕弹出“正在准备打印...”进度模态框
+    Win->>Svc: 生成客户报表 PostScript (PS) 文件
+    activate Svc
+    Svc-->>Win: PS 文件生成完毕 (file_path)
+    deactivate Svc
+    Win->>Queue: 将 PS 文件提交到打印队列 Enqueue(file)
+    activate Queue
+    Queue->>Printer: 调度数据流发送给打印机
+    activate Printer
+    Printer-->>Queue: 打印完成信号 (Success)
+    deactivate Printer
+    Queue-->>Win: 队列任务完成回调
+    deactivate Queue
+    Win->>Win: 从屏幕上销毁/关闭进度模态框
+    Win-->>User: 界面提示“所有客户清单打印完成”
+    deactivate Win
+```
+
+- **图解精要**：
+  1. 时序图以垂直生命线体现时间的流逝，水平实线箭头表示同步调用，虚线箭头表示响应返回。
+  2. 清楚界定了边界对象（Window）、控制对象（Service/Queue）与实体/设备对象的调用责任。
+
+---
+
+## 六、复杂业务逻辑判定两大法宝：决策表与决策树
+
+以航班超重行李托运费率算法为例，对比决策表与决策树的建模逻辑。
+
+```mermaid
+flowchart LR
+    Root{"行李是否超重
+(重量 W ≤ 30kg?)"}
+    Root -->|"W ≤ 30 (未超重)"| Free["免费托运"]
+    Root -->|"W > 30 (超重)"| Line{"航线分类"}
+
+    Line -->|"国内航线"| DomCabin{"舱位等级"}
+    Line -->|"国际航线"| IntCabin{"舱位等级"}
+
+    DomCabin -->|"头等舱"| DomFirst{"是否残疾"}
+    DomCabin -->|"经济舱"| DomEcon{"是否残疾"}
+
+    IntCabin -->|"头等舱"| IntFirst{"是否残疾"}
+    IntCabin -->|"经济舱"| IntEcon{"是否残疾"}
+
+    DomFirst -->|"残疾"| A1["费用: (W - 30) × 2"]
+    DomFirst -->|"正常"| A2["费用: (W - 30) × 4"]
+
+    DomEcon -->|"残疾"| A3["费用: (W - 30) × 3"]
+    DomEcon -->|"正常"| A4["费用: (W - 30) × 6"]
+
+    IntFirst -->|"残疾"| A5["费用: (W - 30) × 4"]
+    IntFirst -->|"正常"| A6["费用: (W - 30) × 8"]
+
+    IntEcon -->|"残疾"| A7["费用: (W - 30) × 6"]
+    IntEcon -->|"正常"| A8["费用: (W - 30) × 12"]
+```
+
+- **图解精要**：
+  1. 树状分支自左向右逐步根据判断条件进行过滤，叶子节点输出确定性的收费动作。
+  2. 与决策表相比，决策树更适合向业务人员直观讲解执行逻辑，而决策表更利于程序员进行穷尽性条件覆盖检验。
+
+---
+
+## 七、四象限需求原型选型矩阵与演化路径
+
+需求原型按“功能维度（水平/垂直）”与“代码生命周期（抛弃式/演化式）”划分为四大类型。
+
+```mermaid
+flowchart TD
+    subgraph Matrix["原型 2×2 选型矩阵"]
+        TH["抛弃式水平原型
+• 快速构建 UI Mockup
+• 探明模糊交互，确认完后丢弃"]
+        TV["抛弃式垂直原型
+• 技术概念验证 (PoC)
+• 验证算法可行性，丢弃临时代码"]
+        EH["演化式水平原型
+• 敏捷骨架系统
+• 搭建高保真界面并持续精化"]
+        EV["演化式垂直原型
+• 核心业务穿透原型
+• 打通全链路并在其上增量生长"]
+    end
+
+    subgraph ThrowawayFlow["抛弃式原型开发流 (探明即弃)"]
+        T1["用例需求"] --> T2["对话图/界面草图"]
+        T2 --> T3["制作临时原型"]
+        T3 --> T4{"用户试用反馈"}
+        T4 -->|达成共识| T5["正式编写 SRS 并丢弃原型代码"]
+        T4 -->|理解有偏差| T2
+    end
+
+    subgraph EvolutionaryFlow["演化式原型开发流 (增量生长)"]
+        E1["高优先级核心需求"] --> E2["架构设计与严密编码"]
+        E2 --> E3["交付增量原型版本"]
+        E3 --> E4{"用户实机验收"}
+        E4 -->|进入下个增量| E1
+    end
+```
+
+- **图解精要**：
+  1. 抛弃式原型的核心目标是“收集反馈与降低风险”，严禁用其拼凑出生产代码。
+  2. 演化式原型的核心是“以正规架构打底”，每一行原型代码都是正式系统的一部分。
+
+---
+
+## 八、Karl Wiegers 优先级决策计算管道模型
+
+基于相对收益、损失、成本与风险四个维度，通过客观数学公式计算需求优先级排序。
+
+```mermaid
+flowchart LR
+    subgraph Inputs["多方主观打分输入 (1~9分)"]
+        B["客户评估: 相对收益
+(Relative Benefit)"]
+        P["客户评估: 相对损失
+(Relative Penalty)"]
+        C["团队评估: 相对成本
+(Relative Cost)"]
+        R["团队评估: 相对风险
+(Relative Risk)"]
+    end
+
+    subgraph CalcVal["价值管道 (Value Pipeline)"]
+        B -->|"收益权重: 2"| TotVal["总价值 = 收益×2 + 损失×1"]
+        P -->|"损失权重: 1"| TotVal
+        TotVal --> ValPct["价值% = 本项价值 / 总价值合计"]
+    end
+
+    subgraph CalcCostRisk["代价管道 (Cost & Risk Pipeline)"]
+        C --> CostPct["成本% = 本项成本 / 总成本合计"]
+        R --> RiskPct["风险% = 本项风险 / 总风险合计"]
+    end
+
+    ValPct --> Score["综合优先级计算公式
+Priority = 价值% / (成本% × 1 + 风险% × 0.5)"]
+    CostPct --> Score
+    RiskPct --> Score
+    Score --> Ranking["客观优先级高低排序表
+(指导迭代版本发布计划)"]
+```
+
+- **图解精要**：
+  1. 收益和损失由客户主导评估，成本和风险由研发团队主导评估，平衡了业务诉求与工程代价。
+  2. 最终结果按数值从大到小排序，数值越高代表单位代价所换取的业务回报越丰厚。
+
+---
+
+## 九、规范需求评审 (Formal Inspection) 6 阶段协同流程
+
+同行评审是软件工程中发现需求缺陷最有效的手段，必须遵循严密的纪律与角色分工。
+
+```mermaid
+flowchart LR
+    P1["1. 规划阶段
+(Planning)
+• 选定评审材料
+• 分配团队角色"] --> P2["2. 总体会议
+(Overview)
+• 作者介绍背景
+• 答疑与分发文档"]
+    P2 --> P3["3. 会前准备
+(Preparation)
+• 评审员独立精读
+• 标记潜在缺陷"]
+    P3 --> P4["4. 评审会议
+(Meeting)
+• 逐条宣读找错
+• 记录缺陷清单"]
+    P4 --> P5["5. 返工修改
+(Rework)
+• 作者针对缺陷
+• 逐一修改纠正"]
+    P5 --> P6["6. 跟踪闭环
+(Follow-up)
+• 协调人核实结果
+• 闭环并归档发布"]
+
+    P4 -.->|严重质量不合格| P1
+```
+
+- **图解精要**：
+  1. 评审会议的黄金法则是“只找缺陷，不现场讨论解决方案”，确保会议高效聚焦。
+  2. 会前充分准备是评审成功的基石；没有准备的评审会往往沦为无意义的辩论。
+
+---
+
+## 十、变更控制委员会 (CCB) 决策与影响分析闭环
+
+在需求基线确立后，任何变更请求均需经过规范的变更控制全流程。
+
+```mermaid
+flowchart TD
+    ReqSubmit["变更提出人
+提交变更请求 (CR)"] --> Log["记录进变更库
+状态: [已提议]"]
+    Log --> PreCheck{"初审与分派"}
+
+    PreCheck -->|明显不合理/重复| RejectPre["直接拒绝/退回
+状态: [已拒绝]"]
+    PreCheck -->|具备评估价值| AssignAnalyst["分派分析员/架构师
+启动 13 项影响分析"]
+
+    AssignAnalyst --> ImpactReport["完成《影响分析评估报告》
+• 工时评估 • 进度延迟
+• 成本增加 • 架构与质量风险"]
+    ImpactReport --> CCBMeeting["召开 CCB 决策会议
+(项目经理/客户/技术负责人)"]
+
+    CCBMeeting --> Decision{"CCB 审定决策"}
+    Decision -->|拒绝| CloseReject["通知相关方并关闭
+状态: [已拒绝]"]
+    Decision -->|推迟| Defer["记录在后续版本候选池
+状态: [已推迟]"]
+    Decision -->|批准| Approve["批准进入当前开发版本
+状态: [已批准]"]
+
+    Approve --> UpdateBL["更新 SRS 需求基线
+修改设计与代码"]
+    UpdateBL --> VerifyTest["测试验证功能与回归测试"]
+    VerifyTest --> CloseCR["关闭变更请求
+状态: [已验证关闭]"]
+```
+
+- **图解精要**：
+  1. CCB 是变更审批的唯一中枢，防止开发者与客户口头私下约定变更。
+  2. 影响分析必须全面覆盖工时、交付期、架构稳定性与测试成本，杜绝盲目变更。
+
+---
+
+## 十一、端到端双向需求跟踪能力联系链 (Traceability Links)
+
+需求跟踪建立起业务目标、软件需求、技术设计、源代码与测试验证之间的无缝映射。
+
+```mermaid
+flowchart LR
+    Biz["业务需求与战略规划
+(Business Needs)"] <-->|"向上回溯规划 / 向下追溯需求"| SRS["软件需求规格说明
+(Software Requirements)"]
+    SRS <-->|"向上回溯需求 / 向下追溯设计"| Arch["系统架构与设计元素
+(Design Elements)"]
+    Arch <-->|"向上回溯设计 / 向下追溯代码"| Code["源代码实现与构建
+(Source Code)"]
+    SRS <-->|"向上回溯需求 / 向下追溯验证"| Test["测试用例与验收准则
+(Test Cases)"]
+
+    classDef trace fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    class Biz,SRS,Arch,Code,Test trace;
+```
+
+- **图解精要**：
+  1. **正向追溯（Forward Traceability）**：确保每一项客户需求都在下游有对应的架构设计、代码文件和测试用例覆盖，防止漏做功能。
+  2. **反向回溯（Backward Traceability）**：确保每一行代码和每一个设计组件都能向上找到最初的需求授权依据，彻底杜绝“镀金（Gold-Plating）”无用代码。
+
+---
+
+## 十二、需求状态生命周期流转状态机模型
+
+跟踪单条需求从提出到交付退役的规范生命周期状态转换。
+
+```mermaid
+stateDiagram-v2
+    [*] --> 已建议: 提出人提交新需求
+
+    已建议 --> 已批准: CCB分析评审通过并纳入版本基线
+    已建议 --> 已拒绝: 评估不符合项目范围或不可行
+    已建议 --> 已推迟: 当前版本不予支持，推迟到后续版本
+
+    已推迟 --> 已批准: 后续版本规划重新启动纳入
+
+    已批准 --> 已实现: 编码完成并通过单元测试/集成
+    已批准 --> 已删除: 需求变更导致当前需求被取消
+
+    已实现 --> 已验证: 通过专门的系统测试/客户验收测试
+    已实现 --> 已批准: 验证不通过，退回重新编码修复
+
+    已验证 --> [*]: 随软件版本正式发布交付
+    已删除 --> [*]: 归档移除
+    已拒绝 --> [*]: 归档记录
+```
+
+- **图解精要**：
+  1. 清晰定义了状态迁移的“入口准则”与“出口准则”。
+  2. 项目经理通过统计各状态需求的占比分布，能够精确获知软件工程当前所处的研发阶段与整体健康度。

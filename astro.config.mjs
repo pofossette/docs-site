@@ -56,9 +56,14 @@ export default defineConfig({
         './src/styles/custom.css',
       ],
       sidebar: [
+        { label: '课程导览与知识图谱', slug: 'index' },
         {
-          label: course.title,
-          items: [{ autogenerate: { directory: course.id } }],
+          label: '速查精编（串讲 · 概念 · 流程图 · 难点）',
+          items: [{ autogenerate: { directory: `${course.id}/review` } }],
+        },
+        {
+          label: '交互式精讲章节',
+          items: course.chapterSlugs,
         },
       ],
     }),

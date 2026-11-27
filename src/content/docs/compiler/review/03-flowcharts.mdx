@@ -1,0 +1,290 @@
+---
+title: 03. 流程图导读：10 幅核心机制与算法图解
+description: 10 幅 Mermaid 流程图、序列图与状态机，可视化自动机转化、LL/LR 分析、拉链回填、栈帧寻址与 DAG 优化。
+sidebar:
+  order: 3
+---
+
+## 图 1：经典编译系统八大阶段协同架构
+
+编译过程由前至后经历六大转换阶段，并由两大支撑系统全程协同贯穿：
+
+```mermaid
+flowchart TD
+    subgraph Frontend["编译前端 (机器无关)"]
+        Src["高级语言源代码 (字符流)"] --> Lexer["1. 词法分析器 (Lexical Analyzer)<br>扫描字符流，识别单词符号"]
+        Lexer -->|"Token 流 (类别码, 属性值)"| Parser["2. 语法分析器 (Syntax Analyzer)<br>构建语法分析树，检查句法结构"]
+        Parser -->|语法分析树 Parse Tree| Semantic["3. 语义分析器 (Semantic Analyzer)<br>检查上下文敏感类型规则，计算属性"]
+        Semantic -->|带注释语法树| IRGen["4. 中间代码生成器 (IR Generator)<br>翻译为四元式 / 三地址代码序列"]
+    end
+
+    subgraph Mid_Backend["编译中后端"]
+        IRGen -->|原始四元式流| Opt["5. 代码优化器 (Code Optimizer)<br>基本块 DAG 局部优化、循环优化"]
+        Opt -->|高效四元式流| CodeGen["6. 目标代码生成器 (Code Generator)<br>寄存器分配、指令选择、汇编输出"]
+        CodeGen --> Target["目标机器汇编 / 物理机器码"]
+    end
+
+    subgraph Infrastructure["编译器全局支撑体系"]
+        SymTab["【符号表管理系统】<br>记录变量名、类型、作用域层深、内存偏移"]
+        ErrMgr["【出错处理系统】<br>语法/语义错误捕获、恐慌模式恢复、错误提示"]
+    end
+
+    Lexer -. 登记/查询标识符 .-> SymTab
+    Parser -. 辅助语法决策 .-> SymTab
+    Semantic -. 填充类型与偏移 .-> SymTab
+    IRGen -. 引用符号地址 .-> SymTab
+    CodeGen -. 读取活动记录偏移 .-> SymTab
+
+    Lexer -. 词法错误 .-> ErrMgr
+    Parser -. 语法错误 .-> ErrMgr
+    Semantic -. 语义类型冲突 .-> ErrMgr
+```
+
+---
+
+## 图 2：词法分析自动机转换全生命周期
+
+从人类可读的词法规范，到计算机硬件能够以 $O(1)$ 时间单步判定的最小 DFA 的完整推导闭环：
+
+```mermaid
+flowchart LR
+    RE["正规表达式 (RE)<br>例如: a(a|b)*b"] -->|Thompson<br>结构归纳算法| NFA["非确定有限自动机 (NFA)<br>含 ε-转移，分支转移多值"]
+    NFA -->|子集构造法<br>ε-闭包 & move 运算| DFA["确定有限自动机 (DFA)<br>无 ε-转移，转移确定"]
+    DFA -->|Hopcroft 算法<br>等价状态逐步分割| MinDFA["状态数最小化 DFA<br>合并等价状态，消除死状态"]
+    MinDFA -->|状态转换矩阵驱动| Code["高效词法扫描循环<br>NextState = Table[s][c]"]
+```
+
+---
+
+## 图 3：自顶向下语法分析决策流与 LL(1) 条件
+
+自顶向下推导必须彻底排除左递归与回溯隐患，才能构建出无冲突的预测分析表：
+
+```mermaid
+flowchart TD
+    StartGrammar["原始上下文无关文法 CFG"] --> CheckRec{"是否存在<br>左递归?"}
+    CheckRec -- 是 --> EliminateRec["消除左递归算法<br>1. 消除直接左递归: A -> βA', A' -> αA'|ε<br>2. 排序代入消除间接左递归"]
+    CheckRec -- 否 --> CheckPrefix{"候选式是否存在<br>公共左前缀?"}
+    EliminateRec --> CheckPrefix
+
+    CheckPrefix -- 是 --> LeftFactoring["提取左公因子算法<br>A -> αA', A' -> β1 | β2"]
+    CheckPrefix -- 否 --> CalcSets["计算集合三步曲<br>1. 计算 Nullable 集合<br>2. 计算所有符号串的 First 集合<br>3. 计算所有非终结符的 Follow 集合"]
+    LeftFactoring --> CalcSets
+
+    CalcSets --> CalcSelect["计算每条产生式的 Select 集合<br>Select(A->α) = First(α) (若不含ε)<br>Select(A->α) = (First(α)\{ε}) ∪ Follow(A) (若含ε)"]
+    CalcSelect --> TestLL1{"任一 A 的各产生式<br>Select 集合两两交集<br>是否为空?"}
+
+    TestLL1 -- 全为空 --> BuildTable["构造 LL(1) 预测分析表 M<br>每个 M[A, a] 恰好包含唯一定义<br>通过符号栈实现表驱动线性分析！"]
+    TestLL1 -- 存在交集 --> NotLL1["文法不是 LL(1) 文法！<br>无法构造确定性自顶向下预测分析表<br>(需增大前瞻符号 k 或改用自底向上 LR 法)"]
+```
+
+---
+
+## 图 4：自底向上 LR 语法分析硬件执行模型
+
+自底向上 LR 分析器依靠两个栈（状态栈与符号栈）及两张核心驱动表（Action 表与 Goto 表）协同运转：
+
+```mermaid
+flowchart LR
+    subgraph Driver["LR 分析总控程序"]
+        StateStack["状态栈: S0, S1, ..., Sm (栈顶)"]
+        SymbolStack["符号栈: #, X1, ..., Xm (栈顶)"]
+        InputBuf["输入缓冲区: ai, ai+1, ..., $"]
+        
+        ActionTab["【Action 表】<br>根据 (Sm, ai) 查动作:<br>- 移进 sj<br>- 规约 rk<br>- 接受 acc<br>- 报错 error"]
+        GotoTab["【Goto 表】<br>根据规约后暴露的<br>状态与非终结符 (Sp, A)<br>查新状态压栈"]
+    end
+
+    InputBuf -->|当前输入符号 ai| Driver
+    StateStack -->|当前栈顶状态 Sm| Driver
+    Driver --> ActionTab
+    ActionTab -->|移进 sj| Action_Shift["压入 ai 与新状态 sj<br>指针前移"]
+    ActionTab -->|规约 A->β| Action_Reduce["两栈同时弹出 |β| 个元素<br>查 Goto(暴露状态, A) 压入新状态"]
+    Action_Reduce --> GotoTab
+```
+
+---
+
+## 图 5：自底向上 LR 家族四代演进与覆盖能力拓扑
+
+LR 系列根据“如何解决移进-规约与规约-规约冲突”呈现出清晰的技术代际演进：
+
+```mermaid
+flowchart TD
+    subgraph Hierarchy["LR 家族文法识别能力包含拓扑 (表达力逐层增强)"]
+        LR0["1. LR(0) 分析法<br>仅由项目圆点构成项目<br>无任何前瞻展望符<br>极易出现移进-规约与规约-规约冲突"]
+        SLR1["2. SLR(1) 简单 LR 分析法<br>状态数与 LR(0) 相同<br>规约时只看产生式左部非终结符的 Follow 集<br>若 Follow 与移进字符不相交即可化解冲突"]
+        LALR1["3. LALR(1) 前瞻 LR 分析法<br>将 LR(1) 中核心相同的同心状态强制合并<br>状态数骤降回 LR(0) 级别<br>绝不产生移进-规约冲突，可能引入规约-规约冲突"]
+        LR1["4. 规范 LR(1) 分析法<br>每个项目显式携带搜索符 [A -> α·β, a]<br>对活前缀的分辨能力达到极致<br>状态数急剧膨胀 (成倍于 LR(0))"]
+    end
+
+    LR0 -->|引入 Follow 集合消冲突| SLR1
+    LR1 -->|合并同心状态核心 Core| LALR1
+    SLR1 -. 表达力弱于 .-> LALR1
+    LALR1 -. 表达力弱于 .-> LR1
+```
+
+---
+
+## 图 6：属性文法（SDD）求值依赖与遍历机制
+
+综合属性与继承属性在语法树中的不同流向，决定了其匹配的遍历求值模式：
+
+```mermaid
+flowchart TB
+    subgraph S_Attr["S-属性文法 (纯综合属性)"]
+        S_Parent["父节点 A [A.val = f(B.val, C.val)]"]
+        S_Left["子节点 B [B.val]"]
+        S_Right["子节点 C [C.val]"]
+        S_Left -->|综合属性向上传递| S_Parent
+        S_Right -->|综合属性向上传递| S_Parent
+        S_Note["【求值方式】<br>与自底向上 LR 规约同步求值<br>在规约 A->BC 的瞬间直接计算并压入语义栈"]
+    end
+
+    subgraph L_Attr["L-属性文法 (包含继承属性，无逆向回环)"]
+        L_Parent["父节点 A [A.inh, A.syn]"]
+        L_Left["子节点 B [B.inh, B.syn]"]
+        L_Right["子节点 C [C.inh, C.syn]"]
+        
+        L_Parent -->|继承属性向下传递| L_Left
+        L_Parent -->|继承属性向下传递| L_Right
+        L_Left -->|兄弟节点向右传递继承属性| L_Right
+        L_Left -->|综合属性向上传递| L_Parent
+        L_Right -->|综合属性向上传递| L_Parent
+        L_Note["【求值方式】<br>与深度优先遍历 (自顶向下递归下降) 同步<br>继承属性作为函数入参，综合属性作为函数返回值"]
+    end
+```
+
+---
+
+## 图 7：布尔控制流语句的拉链回填（Backpatching）流程
+
+解决高级语言单遍扫描编译时，前向转移目标尚未产生的“悬空回填”技术：
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Parser as 语法分析器
+    participant IRGen as 四元式生成器 (emit)
+    participant List as 回填链表管理 (makelist/merge)
+    participant CodeBuf as 四元式代码缓冲区
+
+    Parser->>IRGen: 遇到条件判断 if (a < b)
+    IRGen->>CodeBuf: 生成四元式 100: (j<, a, b, 0) [目标悬空]
+    IRGen->>List: E.truelist = makelist(100)
+    IRGen->>CodeBuf: 生成四元式 101: (j, _, _, 0) [目标悬空]
+    IRGen->>List: E.falselist = makelist(101)
+
+    Note over Parser, CodeBuf: 开始翻译 then 分支语句...
+    Parser->>IRGen: then 分支第一条四元式产生，行号为 102
+    Parser->>List: backpatch(E.truelist, 102)
+    List->>CodeBuf: 将 100 号四元式的目标填为 102: (j<, a, b, 102)！
+
+    Note over Parser, CodeBuf: then 分支结尾生成无条件跳出 if_next
+    IRGen->>CodeBuf: 生成四元式 105: (j, _, _, 0) [目标悬空]
+    IRGen->>List: S1.nextlist = makelist(105)
+
+    Note over Parser, CodeBuf: 开始翻译 else 分支，首行号为 106
+    Parser->>List: backpatch(E.falselist, 106)
+    List->>CodeBuf: 将 101 号四元式的目标填为 106: (j, _, _, 106)！
+
+    Note over Parser, CodeBuf: 整个 if-else 结束，后续语句首行号为 110
+    Parser->>List: S.nextlist = merge(S1.nextlist, S2.nextlist)
+    Parser->>List: backpatch(S.nextlist, 110)
+    List->>CodeBuf: 将 105 号填为 110: (j, _, _, 110)！全部悬空链路闭合！
+```
+
+---
+
+## 图 8：活动记录（栈帧）多层嵌套与静态链/动态链寻址穿透
+
+展示嵌套过程调用下，动态链（调用关系）与静态链（词法作用域外层）的本质分野：
+
+```mermaid
+flowchart TD
+    subgraph StackFrame["函数 P 的活动记录 (栈帧结构)"]
+        direction TB
+        F_Local["局部变量与临时工作区"]
+        F_State["机器状态保护区 (保存返回 PC、通用寄存器)"]
+        F_DL["动态链 (Dynamic Link / 控制链)<br>指向当前函数的【直接调用者】的栈帧基地址"]
+        F_SL["静态链 (Static Link / 访问链)<br>指向当前函数的【语法外层定义者】的栈帧基地址"]
+        F_Param["形参传递区与过程调用返回值"]
+    end
+
+    subgraph DynamicLink_Trace["运行时返回恢复轨迹 (Dynamic Link)"]
+        DL_A["Main 栈帧"]
+        DL_B["Func_foo 栈帧"]
+        DL_C["Func_bar 栈帧"]
+
+        DL_C -->|动态链恢复返回| DL_B
+        DL_B -->|动态链恢复返回| DL_A
+        Note_DL["沿动态链回溯：<br>可完全还原当前时刻的函数调用调用栈轨迹 (Call Stack Trace)"]
+    end
+
+    subgraph StaticLink_Trace["外层变量寻址穿透轨迹 (Static Link)"]
+        SL_Main["Main (定义全局变量 x, 层深=1)"] 
+        SL_Outer["Outer_Proc (层深=2)"]
+        SL_Inner["Inner_Proc (层深=3, 试图读取 x)"]
+
+        SL_Inner -->|静态链跨越 1 层| SL_Outer
+        SL_Outer -->|静态链跨越 1 层| SL_Main
+        Note_SL["沿静态链溯源：<br>跨越 (3 - 1 = 2) 条静态链指针，精准定位外层全局变量 x 的内存物理地址！"]
+    end
+```
+
+---
+
+## 图 9：基本块划分（Leader）与 DAG 局部优化全流程
+
+基本块局部优化将看似冗余的顺序指令，重塑为无环有向图并实现四大优化合一：
+
+```mermaid
+flowchart TD
+    subgraph Part1["步骤一：划分基本块 (Basic Block)"]
+        AllQuads["输入的连续三地址四元式程序"] --> FindLeader["应用三大准则找出 Leader 入口语句:<br>1. 程序第一条语句<br>2. 任何转移指令的目标语句<br>3. 紧跟在条件转移指令后面的语句"]
+        FindLeader --> SplitBlocks["从一个 Leader 到下一个 Leader 之前<br>切分为一个个独立的【基本块】"]
+    end
+
+    subgraph Part2["步骤二：为基本块构建 DAG 并同步优化"]
+        SplitBlocks --> ForEachQuad["逐条扫描基本块内的四元式 A = B op C"]
+        ForEachQuad --> CheckSubExp{"DAG 中是否存在<br>以同样操作数执行同样运算的节点?"}
+        CheckSubExp -- 存在 --> ReuseNode["复用已有节点！消除公共子表达式！<br>将变量 A 挂载到已有节点上"]
+        CheckSubExp -- 不存在 --> CheckConst{"操作数是否<br>均为编译期常数?"}
+        CheckConst -- 是 --> ConstFold["编译期直接算出常数值！<br>常数折叠，创建常数节点"]
+        CheckConst -- 否 --> NewNode["创建新的操作符节点，标记操作数边关系"]
+    end
+
+    subgraph Part3["步骤三：从优化后的 DAG 重构导出新四元式"]
+        ReuseNode --> ExportBlock["自底向上遍历 DAG 节点<br>消除死代码 (未被块外引用的节点不发指令)<br>吐出最精简的高效中间代码四元式！"]
+        ConstFold --> ExportBlock
+        NewNode --> ExportBlock
+    end
+```
+
+---
+
+## 图 10：目标代码生成与寄存器描述表（RVALUE / AVALUE）状态机
+
+简单代码生成器在物理寄存器容量有限的前提下，如何动态维护寄存器分配与写回内存决策：
+
+```mermaid
+stateDiagram-v2
+    [*] --> ScanQuad: 读入待翻译四元式 A = B op C
+    
+    ScanQuad --> QueryReg: 调用 getreg 算法为结果 A 和操作数寻找寄存器
+    
+    state QueryReg {
+        [*] --> CheckAlloc: 寄存器池是否存在空闲寄存器 R?
+        CheckAlloc --> AssignFree: 存在空闲 R -> 直接分配使用
+        CheckAlloc --> SpillNeeded: 全满 -> 评估换出代价 (查找未来最晚被引用的寄存器 R_victim)
+        SpillNeeded --> CheckDirty: 检查 AVALUE[R_victim 内变量] 是否已在内存有最新备份?
+        CheckDirty --> EmitStore: 内存无备份 -> 发射指令: STORE R_victim, mem_addr
+        CheckDirty --> DirectOverwrite: 内存有备份 -> 丢弃寄存器副本，直接覆写
+        EmitStore --> DirectOverwrite
+        DirectOverwrite --> AssignFree
+    }
+
+    QueryReg --> EmitInstr: 发射计算汇编指令: ADD R_dest, R_B, R_C
+    EmitInstr --> UpdateDesc: 动态更新描述表:<br>1. RVALUE[R_dest] = {A}<br>2. AVALUE[A] = {R_dest}<br>3. 若 B/C 后续不再待命，从对应 RVALUE 中释放
+    UpdateDesc --> [*]: 处理下一条四元式
+```
